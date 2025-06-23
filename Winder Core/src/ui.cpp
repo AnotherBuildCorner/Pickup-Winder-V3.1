@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "preset.h"
 #include "global_vars.h"
+#include <TMCStepper.h>
 
 TFT_eSPI tft = TFT_eSPI();
 XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
@@ -37,14 +38,16 @@ const char* keys[4][4] = {
 
 
 void initUI() {
+  Serial.println("InitUI called");
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
-
+  
   ts.begin();
  // ts.setRotation(3);  // Match screen orientation
 
-  drawPresetButtons();
+ drawPresetButtons();
+ Serial.println("InitUI exiting");
 }
 
 void drawPresetButtons() {
@@ -164,7 +167,6 @@ void handleEditScreenTouch() {
   menuState = PRESET_WINDING;  // or PRESET_WINDING
   Serial.printf("Launching preset %d...\n", selectedPreset);
   drawWindingScreen();  // Optional placeholder screen
-  delay(200);
   launchActive = true;  // Set global flag to indicate winding is active
   return;
 }
@@ -696,9 +698,23 @@ void handlePatternOverlayTouch() {
 }
 
 void drawWindingScreen() {
+  
+  Current_RPM = (60.0 * 1e6) / (ISR_delay * spindle_isr_mult * steps_rev*2); // calculate current RPM based on ISR delay and steps per revolution
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN);
   tft.setTextSize(2);
   tft.setCursor(40, 100);
   tft.print("Winding Started...");
+  tft.setCursor(40, 120);
+  tft.print("turns remaining: ");
+  tft.print(steps_remaining/steps_rev);
+  tft.setCursor(40, 140);
+  tft.print("speed: ");
+  tft.print(Current_RPM);
+  tft.setCursor(40, 160);
+  tft.print("micros: ");
+  tft.print(speed);
+  tft.setCursor(40, 180);
+  tft.print("flag: ");
+  tft.print(runflag);
 }
