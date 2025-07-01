@@ -715,11 +715,11 @@ void drawWindingScreen() {
   tft.print("turns count: ");
   tft.print(turn_count);
   tft.setCursor(40, screenstart + 40);
-  tft.print("speed: ");
+  tft.print("Current RPM: ");
   tft.print(Current_RPM);
   tft.setCursor(40, screenstart + 60);
-  tft.print("Step Rate: ");
-  tft.print(Current_Step_Rate);
+  tft.print("Target RPM: ");
+  tft.print(Target_RPM);
   tft.setCursor(40, screenstart + 80);
   tft.print("stepcount: ");
   tft.print(spindleStepCount);

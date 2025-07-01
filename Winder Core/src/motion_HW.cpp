@@ -5,7 +5,8 @@
 #define R_SENSE 0.11f
 #define Spindle_ADDRESS 0b00
 #define Traverse_ADDRESS 0b01
-#define DUAL_SERIAL
+#define ADC_MAX 4095
+//#define DUAL_SERIAL
 #define SENSORLESS_HOME
 
 #ifdef DUAL_SERIAL
@@ -63,6 +64,8 @@ void AxisStepper::begin(bool clockwise) {
   pinMode(_readbackPin, INPUT);
   attachInterrupt(digitalPinToInterrupt(SPINDLE_READBACK_PIN), onSpindleStep, RISING);
 
+  
+
 }
 
 void AxisStepper::setDirection(bool clockwise) {
@@ -75,30 +78,68 @@ void AxisStepper::setEnabled(bool run) {
     gpio_set_level(_enablePin, run ? LOW : HIGH);
   }
 }
+void AxisStepper::getRate(unsigned long timer_ms, int refresh_Time) {
+  static unsigned long lastReadTime = 0;
+  static float averageRPM = 0;
+
+  // Ring buffer for moving average
+  static int rpmBuffer[5] = {0};
+  static int bufferIndex = 0;
+  static bool bufferFilled = false;
+
+  if (timer_ms - lastReadTime < refresh_Time) return;
+  lastReadTime = timer_ms;
+
+  // Read and map pot value
+  int potValue = analogRead(SPEED_POT);
+  int RPM = map(potValue, 0, ADC_MAX, 0, maxrpm);
+
+  // Store in buffer
+  rpmBuffer[bufferIndex] = RPM;
+  bufferIndex = (bufferIndex + 1) % speedPotAveraging;
+  if (bufferIndex == 0) bufferFilled = true;
+
+  // Compute average
+  int sum = 0;
+  int count = bufferFilled ? 5 : bufferIndex;
+  for (int i = 0; i < count; i++) {
+    sum += rpmBuffer[i];
+  }
+  averageRPM = sum /( count*speedPotChunk);
+  averageRPM = (averageRPM *speedPotChunk);
+  averageRPM = constrain(averageRPM, 0, maxrpm); // Ensure average is within bounds
+
+  Target_RPM = averageRPM;
+}
+
 
 void AxisStepper::setRate(float RPM) {
   if (RPM > maxrpm) {
     RPM = maxrpm; } // Cap at max RPM
+    else if (RPM < 0) {RPM = 0; } // Prevent negative RPM
+  Current_RPM = RPM; // Update current RPM
   Current_Step_Rate = (RPM * steps_rev * SPINDLE_MICROSTEPS) / 60.0;
+
   ledcWriteTone(_ledcChannel, Current_Step_Rate);
 }
 
-void AxisStepper::rampAcceleration(float targetRPM, float ramp_rate, bool decelerate, unsigned long timer_ms ,int refresh_Time) {
+void AxisStepper::rampAcceleration(int targetRPM, float ramp_rate, bool decelerate, unsigned long timer_ms ,int refresh_Time) {
   static unsigned long lastRampTime = 0;
   if(timer_ms - lastRampTime < refresh_Time) return; // Limit ramping to every 100ms
   lastRampTime = timer_ms;
-  if (targetRPM > maxrpm) {targetRPM = maxrpm; } // Cap at max RPM
+    if (targetRPM > maxrpm) {targetRPM = maxrpm; } // Cap at max RPM
+    else if (targetRPM < 0) {targetRPM = 0; } // Prevent negative RPM
   if(Current_RPM != targetRPM){ // Prevent negative RPM
     if(decelerate)
-      {Current_RPM -= (ramp_rate*refresh_Time/1000);}
+      {Current_RPM -= (ramp_rate*refresh_Time/1000);
+      if(Current_RPM < targetRPM) {Current_RPM = targetRPM; } 
+      }
     else
-      {Current_RPM += (ramp_rate*refresh_Time/1000);}
-  }
-  if(Current_RPM < 0) {
-    Current_RPM = 0; } // Prevent negative RPM
+      {Current_RPM += (ramp_rate*refresh_Time/1000);
+      if(Current_RPM > targetRPM) {Current_RPM = targetRPM; }}
 
     setRate(Current_RPM); // Update step rate
-  }
+  }}
 
 
 int AxisStepper::getStepCount() const {  // Read the global step count
@@ -196,6 +237,7 @@ AxisStepper spindle(SPINDLE_STEP_PIN, SPINDLE_DIR_PIN, 0, SPINDLE_ENABLE_PIN);
 TraverseStepper traverse(TRAVERSE_STEP_PIN, TRAVERSE_DIR_PIN, 3, TRAVERSE_ENABLE_PIN);
 
 void initMotionPins() {
+  pinMode(SPEED_POT,INPUT);
   spindle.begin();
   traverse.begin();
 }

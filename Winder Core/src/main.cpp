@@ -45,7 +45,7 @@ void loop() {
   unsigned long ct2 = millis();
   static unsigned long traverse_timer = 0;
   static bool direction = 1;
-  static bool homed = false;
+  static bool homed = true;
   static bool runonce = false;
 
 
@@ -88,7 +88,8 @@ void loop() {
 
       
       if(run && homed){
-        Target_RPM = maxrpm;
+        //Target_RPM = 1000;
+        spindle.getRate(ct2, 100); // Read the speed pot value and update target RPM
         spindle.setEnabled(true);
         traverse.setEnabled(true); // Disable traverse after homing
 

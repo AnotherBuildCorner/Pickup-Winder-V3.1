@@ -19,6 +19,10 @@
 
 #define TOUCH_CS  4
 #define TOUCH_IRQ 15
+
+#define SPEED_POT 3
+#define speedPotAveraging 10
+#define speedPotChunk 20
 //------------ Motion control pins ------------
 #define SPINDLE_STEP_PIN    ((gpio_num_t)2)
 #define SPINDLE_DIR_PIN     ((gpio_num_t)42)

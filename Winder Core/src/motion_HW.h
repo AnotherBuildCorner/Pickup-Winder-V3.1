@@ -17,7 +17,8 @@ public:
   int getStepCount() const;
   float getTurnCount() const;
   void resetStepCount();
-  void rampAcceleration(float targetRPM, float rampRate = 10.0f, bool decelerate = false, unsigned long timer_ms = 0, int refresh_Time = 100);
+  void rampAcceleration(int targetRPM, float rampRate = 10.0f, bool decelerate = false, unsigned long timer_ms = 0, int refresh_Time = 100);
+  void getRate(unsigned long timer_ms, int refresh_Time = 200); // Read the speed pot value and update target RPM
 private:
   gpio_num_t _stepPin, _dirPin, _enablePin, _readbackPin;
   float _targetRate;
