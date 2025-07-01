@@ -4,10 +4,11 @@
 #include <TMCStepper.h>
 
 TFT_eSPI tft = TFT_eSPI();
+SPIClass& sharedSPI = SPI;
 XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
 
 MenuState menuState = PRESET_SELECT;
-int selectedPreset = -1;
+
 EditingState editingState = NONE;
 String editBuffer = "";
 
@@ -42,7 +43,9 @@ void initUI() {
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
+  //sharedSPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI);
   
+  //ts.begin(sharedSPI);
   ts.begin();
  // ts.setRotation(3);  // Match screen orientation
 
@@ -67,6 +70,10 @@ void drawPresetButtons() {
 }
 
 void updateUI() {
+  if (ts.touched()) {
+    TS_Point p = ts.getPoint();
+    Serial.printf("Touch: x=%d y=%d z=%d\n", p.x, p.y, p.z);
+  delay(100);}
   if (menuState == PRESET_SELECT && ts.touched()) {
     handlePresetSelectTouch();
   } 
@@ -698,23 +705,25 @@ void handlePatternOverlayTouch() {
 }
 
 void drawWindingScreen() {
-  
-  Current_RPM = (60.0 * 1e6) / (ISR_delay * spindle_isr_mult * steps_rev*2); // calculate current RPM based on ISR delay and steps per revolution
+  int screenstart = 40;
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN);
   tft.setTextSize(2);
-  tft.setCursor(40, 100);
+  tft.setCursor(40, screenstart);
   tft.print("Winding Started...");
-  tft.setCursor(40, 120);
-  tft.print("turns remaining: ");
-  tft.print(steps_remaining/steps_rev);
-  tft.setCursor(40, 140);
+  tft.setCursor(40, screenstart + 20);
+  tft.print("turns count: ");
+  tft.print(turn_count);
+  tft.setCursor(40, screenstart + 40);
   tft.print("speed: ");
   tft.print(Current_RPM);
-  tft.setCursor(40, 160);
-  tft.print("micros: ");
-  tft.print(speed);
-  tft.setCursor(40, 180);
-  tft.print("flag: ");
-  tft.print(runflag);
+  tft.setCursor(40, screenstart + 60);
+  tft.print("Step Rate: ");
+  tft.print(Current_Step_Rate);
+  tft.setCursor(40, screenstart + 80);
+  tft.print("stepcount: ");
+  tft.print(spindleStepCount);
+  tft.setCursor(40, screenstart + 100);
+  tft.print("tension: ");
+  tft.print(Tensioner_reading);
 }

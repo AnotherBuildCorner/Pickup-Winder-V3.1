@@ -1,6 +1,6 @@
 #include "preset.h"
 #include "global_vars.h"
-
+WinderPreset presets[8];
 
 void loadDefaultPresets() {
 WinderPreset defaults[8] = {
@@ -97,12 +97,12 @@ WinderPreset defaults[8] = {
   },
   {
     "Custom",
-    10500,
-    41,
+    1000,
+    42,
     false,
     56.0,
     0.0,
-    {2, 2, 2, 2, 0},
+    {2, 2, 2, 7, 0},
     53.0,
     1.0,
     2.0,

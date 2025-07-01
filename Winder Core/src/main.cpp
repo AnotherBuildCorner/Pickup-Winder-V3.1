@@ -2,19 +2,19 @@
 #include "preset.h"
 #include "ui.h"
 #include <TFT_eSPI.h>
-#include "motion.h"
+//#include "motion.h"
+#include "motion_HW.h"
 #include "tensioner.h"
 
-#define enable_screen false // Set to false to disable screen updates
+#define enable_screen true // Set to false to disable screen updates
 int calibrationDone = 1;
 void setup() {
   Serial.begin(115200);
-  initTMC();
-
-  Serial.println("Did we boot?");
   
 
-
+  delay(500);
+  Serial.println("Did we boot?");
+  
   loadDefaultPresets();   // Loads dummy preset data
   if(enable_screen){
   initUI();     
@@ -22,52 +22,114 @@ void setup() {
     runCalibration();      // Run calibration only if not done
   }}
 
+
     initMotionPins();
-    tensioner_setup();
+    delay(100);
     
-launchActive = true;
-run = true;
+    tensioner_setup();
+    delay(100);
+    initTMC();
+    delay(100);
+    traverse.enableHoming(DIAG_PIN, false); // Enable homing with active low
+
 }
 
 
 void loop() {
+  
+
   static unsigned long screentime = 0;
   static unsigned long speedtimer = 0;
   static unsigned long coretimer = 0; // initial speed in microseconds per step
   unsigned long ct = micros();
   unsigned long ct2 = millis();
+  static unsigned long traverse_timer = 0;
   static bool direction = 1;
+  static bool homed = false;
+  static bool runonce = false;
+
 
 
 
     if(launchActive){
-      delay(100);
-      tensioner_output();
+      static unsigned long traverse_step_counter = 0;
+      static bool traverse_direction = true; // true = forward, false = backward
       run = true;
-      if(screentime + refreshmicros < ct && enable_screen) {screentime = ct; drawWindingScreen();}
-      if(coretimer + 5000 < ct2){turns = steps_remaining / steps_rev; // controls screen refresh rate
-        coretimer = ct2;
-        direction = !direction;
-        digitalWrite(SPINDLE_DIR_PIN, direction);
-        
-
-        Serial.println(direction);} // Set spindle direction
-        
       
-     
-     // controls screen refresh rate
-      if(speedtimer + speed < ct){
-          speedtimer = ct;
-          Current_RPM += accel; // increase speed every time the timer expires
-      if(Current_RPM > maxrpm) Current_RPM = maxrpm; // cap speed
-        speed = RPM_to_micros / Current_RPM; // convert RPM to microseconds per step
 
-      //Serial.println("step: " + String(steps_traversed) + " turns: " + String(turns) + " speed: " + String(speed));
+      if(spindle.getTurnCount() >= presets[selectedPreset].turns){
+        run = false; // Stop winding after 5000 turns
+        spindle.setEnabled(false);
+        traverse.setEnabled(false);}
+ // Reset launch flag
+    if(run && homed == false){
+      if(runonce == false){
+        runonce = true;
+        traverse.setDirection(true);
+        traverse.setEnabled(true);
+        
+        traverse.setRate(500);
+        
+        
     }
+        tensioner_output(ct2, 100);
+        traverse.checkHome(); // Check if homing is triggered
+        if(traverse.isHomed()) {
+          //homed = true;
+          traverse.setPosition(0); // Reset position after homing
+          traverse.setZero(); // Reset the stepper position
+          traverse.setEnabled(false); // Disable traverse after homing
+          delay(1000);
+
+        }
+
   }
-  else
-  {
+
+
+      
+      if(run && homed){
+        Target_RPM = maxrpm;
+        spindle.setEnabled(true);
+        traverse.setEnabled(true); // Disable traverse after homing
+
+        tensioner_output(ct2, 100);
+
+        if(spindle.getTurnCount() > presets[selectedPreset].turns-spin_down_turns){spindle.rampAcceleration(100, Accel_RPM, true, ct2, 100);}
+        else{spindle.rampAcceleration(Target_RPM, Accel_RPM, false, ct2, 100);}
+
+
+         // Ramp acceleration
+        
+
+
+        if(traverse_timer + 200 < ct2){
+          
+          traverse_timer = ct2;
+          traverse.setRate(Current_RPM);
+          if(traverse_direction){
+            traverse_step_counter+= 1; // Current_Step_Rate/5;
+            if(traverse_step_counter >= 20) { // Change direction every 1000 steps  5*200*TRAVERSE_MICROSTEPS
+              traverse_direction = false;
+              traverse.setDirection(false);
+            }
+          } else {
+            traverse_step_counter-= 1; // Current_Step_Rate/5;;
+            if(traverse_step_counter <= 0) { // Change direction every 1000 steps
+              traverse_direction = true;
+              traverse.setDirection(true);
+            }
+          }
+        }
+
   
-    updateUI();
-  }
+      if(screentime + refreshmicros < ct && enable_screen) {screentime = ct; drawWindingScreen();}
+      if(coretimer + 200*1000 < ct){
+        turn_count = spindle.getTurnCount(); 
+        coretimer = ct;
+
+    }
+  }}
+  else{updateUI();
+  tensioner_output(ct2, 100);}
 }
+
