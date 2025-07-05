@@ -39,15 +39,21 @@ TMC2209Stepper traverse_driver(&TMCSerial, R_SENSE, Traverse_ADDRESS);
 #define TRAVERSE_STALLGUARD 100// 0-255
 
 void IRAM_ATTR onSpindleStep() {
+  if(enableSpindleISR) {
+
   spindleStepCount++;
   
-}
+}}
 
 void IRAM_ATTR onTraverseStep() {
-  if(traverseDir)
-    traverseStepCount++;
-  else
-    traverseStepCount--;
+  if(enableTraverseISR) {
+    if(traverseDir) {
+      traverseStepCount++;
+    } else {
+      traverseStepCount--;
+    }
+  }
+
 }
 
 AxisStepper::AxisStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin, gpio_num_t readbackPin)
@@ -64,7 +70,7 @@ void AxisStepper::begin(bool clockwise) {
   }
 
   // LEDC setup
-  ledcSetup(_ledcChannel, 5000, 2);  // 5 kHz default
+  ledcSetup(_ledcChannel, 0, 1);  // 5 kHz default
   ledcAttachPin(_stepPin, _ledcChannel);
   
 
@@ -84,6 +90,7 @@ void AxisStepper::setDirection(bool clockwise) {
 void AxisStepper::setEnabled(bool run) {
   if (_enablePin != GPIO_NUM_NC) {
     gpio_set_level(_enablePin, run ? LOW : HIGH);
+    enableSpindleISR = run; // Enable or disable ISR based on run state
   }
 }
 void AxisStepper::getRate(unsigned long timer_ms, int refresh_Time) {
@@ -183,7 +190,7 @@ void TraverseStepper::begin() {
     gpio_set_level(_enablePin, HIGH);
   }
 
-  ledcSetup(_ledcChannel, 5000, 1);
+  ledcSetup(_ledcChannel, 0, 1);
   ledcAttachPin(_stepPin, _ledcChannel);
 
   pinMode(TRAVERSE_READBACK_PIN, INPUT);
@@ -198,6 +205,7 @@ void TraverseStepper::setRate(float stepsPerSecond) {
 void TraverseStepper::setEnabled(bool run) {
   if (_enablePin != GPIO_NUM_NC) {
     gpio_set_level(_enablePin, run ? LOW : HIGH);
+    enableTraverseISR = run; // Enable or disable ISR based on run state
   }
 }
 
@@ -206,10 +214,11 @@ void TraverseStepper::setLimits(float minPos, float maxPos) {
   _posMax = distanceToSteps(maxPos);
 }
 
-void TraverseStepper::setTraverseRate(int spindleStepRate, float wireGauge, float multiplier)  {
+void TraverseStepper::setTraverseRate(int spindleStepRate, float wireGauge)  {
   // Convert spindle step rate to traverse step rate
-  int traverseStepRate = spindleStepRate * multiplier * wireGauge*(TRAVERSE_MICROSTEPS / SPINDLE_MICROSTEPS)/
+  int traverseStepRate = spindleStepRate * _multiplier * wireGauge*(TRAVERSE_MICROSTEPS / SPINDLE_MICROSTEPS)/
                           (Lead_Screw_Pitch); // Convert gauge to mm
+  
   ledcWriteTone(_ledcChannel, traverseStepRate);
 
 }
@@ -268,6 +277,46 @@ void TraverseStepper::enableHoming(gpio_num_t pin, bool activeLow) {
 
 }
 
+void TraverseStepper::jogDistance(int speed, float distance, bool direction, bool stopAfter) {
+  setEnabled(true);
+  setDirection(direction);
+  setRPM(speed);  // LEDC step pulse output
+
+  int startSteps = traverseStepCount;
+  int targetSteps = distanceToSteps(distance);
+
+  while (true) {
+    int currentSteps = traverseStepCount;
+    int delta = abs(currentSteps - startSteps);
+    if (delta >= targetSteps) break;
+    delay(1);  // Prevent watchdog timer panic
+  }
+
+  if (stopAfter) {
+    ledcWriteTone(_ledcChannel, 0);
+    setEnabled(false);
+  }
+}
+
+void TraverseStepper::setMultiplier() {
+  float i_multiplier = 1.0f;
+  i_multiplier = currentPreset.pattern[_layerCount % currentPreset.pattern.size()];
+
+  if (i_multiplier <= 1.0f) {
+    i_multiplier = 1.0f; // Default to 1 if multiplier is invalid
+  }
+  else if( i_multiplier > MAX_TRAVERSE_MULTIPLIER) {
+    i_multiplier = MAX_TRAVERSE_MULTIPLIER; // Cap at maximum multiplier
+  }
+  _multiplier = i_multiplier;
+
+
+}
+
+float TraverseStepper::getMultiplier(){
+  return _multiplier;
+}
+
 void TraverseStepper::checkHome() {
   if (_homePin == GPIO_NUM_NC) return;
   bool triggered = digitalRead(_homePin) == (_homeActiveLow ? LOW : HIGH);
@@ -289,10 +338,95 @@ _backoff = distanceToSteps(distance);
   Serial.println("Backoff distance set to " + String(_backoff) + " steps.");
 }
 
+void TraverseStepper::loadCompParameters(const WinderPreset& preset){
+_turns = preset.turns;
+_width = preset.width_mm;
+_length = preset.length_mm;
+_height = preset.center_space_mm;
+_internal_error = preset.edge_error;
+_gauge_type = preset.gauge;
+_gauge = preset.wire_diameter_mm;
+_DCR = preset.resistance_per_Meter;
+_pattern = preset.pattern;
+}
+
+
+int TraverseStepper::computeLayers() {
+  int repeat = _pattern.size();
+  int consumed_turns = 0;
+  int layercount = 0;
+  _turnsPerLayer.clear();  // Reset before populating
+
+  while (consumed_turns < _turns) {
+    float mult = _pattern[layercount % repeat];
+    mult = constrain(mult, 1.0f, MAX_TRAVERSE_MULTIPLIER);
+
+    // Calculate turns in this layer
+    int turnlayer = (_width - _internal_error) / (_gauge * mult);
+    if (turnlayer <= 0) break;  // Prevent infinite loop on bad input
+
+    _turnsPerLayer.push_back(turnlayer);
+
+    consumed_turns += turnlayer;
+    layercount++;
+  }
+
+  _layers = layercount;
+  return _layers;
+}
+
+
+int TraverseStepper::computeLength() {
+  _lengthPerLayer.clear();
+  float totalLength = 0.0f;
+
+  for (size_t i = 0; i < _turnsPerLayer.size(); ++i) {
+    int turns = _turnsPerLayer[i];
+    float mult = _pattern[i % _pattern.size()];
+
+    // Clamp multiplier for safety
+    mult = constrain(mult, 1.0f, MAX_TRAVERSE_MULTIPLIER);
+
+    // Calculate average radius of this layer (height is total bobbin pole diameter)
+    float radius = (_height / 2.0f) + i * _gauge;
+
+    // Circumference based on scatter offset
+    float circumference = 2.0f * M_PI * radius;
+
+    // Optional: Add scatter compensation fudge factor (small % increase for zig-zag)
+    float layerLength = circumference * turns * 1.01f;
+
+    _lengthPerLayer.push_back(layerLength);
+    totalLength += layerLength;
+  }
+
+  return totalLength;  // in mm
+}
+
+int TraverseStepper::computeLiveDCR(int currentLayer, float layerProgress) {
+  if (_lengthPerLayer.empty() || currentLayer < 0) return 0.0f;
+
+  layerProgress = constrain(layerProgress, 0.0f, 1.0f);
+
+  float totalLength = 0.0f;
+
+  // Sum fully completed layers
+  for (int i = 0; i < currentLayer && i < _lengthPerLayer.size(); ++i) {
+    totalLength += _lengthPerLayer[i];
+  }
+
+  // Add partial progress for current layer
+  if (currentLayer < _lengthPerLayer.size()) {
+    totalLength += _lengthPerLayer[currentLayer] * layerProgress;
+  }
+
+  return totalLength * _DCR;  // final DCR value
+}
+
 
 bool TraverseStepper::homeProcess(int rate, bool dir) {
   if (!isHomed()) {
-    
+    _backoff = _backoff + plateZeroOffset;
     setEnabled(true);
     setDirection(traverseDir);
     setRPM(rate);
@@ -321,6 +455,12 @@ int TraverseStepper::distanceToSteps(float distance) {
   return static_cast<int>(distance * steps_rev * (TRAVERSE_MICROSTEPS)/ Lead_Screw_Pitch);
 }
 
+float TraverseStepper::computePosition(){
+  _stepcount = traverseStepCount;
+  return (_stepcount * Lead_Screw_Pitch) / static_cast<float>(steps_rev * TRAVERSE_MICROSTEPS);
+
+  
+}
 AxisStepper spindle(SPINDLE_STEP_PIN, SPINDLE_DIR_PIN, 0, SPINDLE_ENABLE_PIN, SPINDLE_READBACK_PIN);
 TraverseStepper traverse(TRAVERSE_STEP_PIN, TRAVERSE_DIR_PIN, 3, TRAVERSE_ENABLE_PIN, TRAVERSE_READBACK_PIN);
 
@@ -335,8 +475,7 @@ bool homeCycle(int rate, bool dir, float backoffDistance, unsigned long timer_ms
   if(!runonce) {
     Serial.println("🔧 Homing cycle initiated...");
     runonce = true;
-    spindle.setEnabled(false); // Ensure spindle is disabled during homing
-    spindle.setRate(rate);
+    
   }
 
   if(!skip){
@@ -345,6 +484,7 @@ bool homeCycle(int rate, bool dir, float backoffDistance, unsigned long timer_ms
   if(homed) {
     Serial.println("✅ Homing cycle completed successfully!");
     traverse.setEnabled(false); // Stop traverse after homing
+    traverse.setZero(); // Set zero position after homing
     skip = true;}
   return homed;
 
@@ -410,25 +550,3 @@ if(traverse_driver.test_connection() == 0) {
 
 }
 
-std::vector<int> precomputeMultipliers(int totalTurns, const std::vector<int>& pattern, float wireWidth, float bobbinWidth) {
-  std::vector<int> result;
-  result.reserve(totalTurns);
-
-  int layer = 0;
-  int turnsRemaining = totalTurns;
-
-  while (turnsRemaining > 0) {
-    int multiplier = pattern[layer % pattern.size()];
-    float stepSize = multiplier * wireWidth;
-    int turnsThisLayer = floor(bobbinWidth / stepSize);
-
-    for (int i = 0; i < turnsThisLayer && result.size() < totalTurns; ++i) {
-      result.push_back(multiplier);
-    }
-
-    ++layer;
-    turnsRemaining = totalTurns - result.size();
-  }
-
-  return result;
-}

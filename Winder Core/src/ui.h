@@ -4,7 +4,7 @@
 #include "preset.h"
 #include "config.h"
 #include "global_vars.h"
-
+#include "motion_HW.h"
 
 extern TFT_eSPI tft;
 

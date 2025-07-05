@@ -1,9 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "preset.h"
 #include "config.h"
-#include "wire_parameters.h"
 #include <vector>
 
 extern volatile bool tick;
@@ -34,22 +32,34 @@ extern float Tensioner_reading; // Current tensioner reading in grams
 extern volatile uint32_t spindleStepCount;
 extern volatile int traverseStepCount;
 extern volatile bool traverseDir; // true = forward, false = backward
+extern volatile bool enableTraverseISR;
+extern volatile bool enableSpindleISR;
+extern float plateZeroOffset;
+
+extern std::vector<int> precomputedMultipliers;
 
 struct WinderPreset {
   String name;
-    int turns;
-  int gauge;
+  int turns;
+  std::string gauge;
   bool Spin_direction; // true = clockwise, false = counter-clockwise
   float width_mm;
   float overwind_percent;
-  std::vector<int> pattern;
+  std::vector<float> pattern;
   float length_mm;
   float center_space_mm;
   float faceplate_thickness;
   float edge_error;
+  float wire_diameter_mm;
+  float resistance_per_Meter;
+  float min_tension_g;
+  float max_tension_g;
+  float break_strength_g;
+
    // Optional, default 0
 };
 
 extern WinderPreset presets[8];
-
 extern WinderPreset currentPreset;
+
+    

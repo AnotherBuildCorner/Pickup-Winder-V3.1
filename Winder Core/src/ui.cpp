@@ -2,6 +2,7 @@
 #include "preset.h"
 #include "global_vars.h"
 #include <TMCStepper.h>
+#include "motion_HW.h"
 
 TFT_eSPI tft = TFT_eSPI();
 SPIClass& sharedSPI = SPI;
@@ -136,7 +137,7 @@ void handleEditScreenTouch() {
   }
   else if (tx > 160 && tx < 320 && ty > 45 && ty < 70) {
     editingState = EDIT_GAUGE;
-    drawEditOverlay("Gauge", String(presets[selectedPreset].gauge));
+    drawEditOverlay("Gauge", String(presets[selectedPreset].gauge.c_str()));
   }
   else if (tx > 160 && tx < 320 && ty > 70 && ty < 95) {
     editingState = EDIT_WIDTH;
@@ -179,6 +180,9 @@ void handleEditScreenTouch() {
   Serial.printf("Launching preset %d...\n", selectedPreset);
   drawWindingScreen();  // Optional placeholder screen
   launchActive = true;  // Set global flag to indicate winding is active
+  currentPreset = presets[selectedPreset];  // Update current preset
+  traverse.loadCompParameters(currentPreset);
+  traverse.jogDistance(50,currentPreset.faceplate_thickness,true);
   return;
 }
   else if (tx > 200 && tx < 300 && ty > 215 && ty < 235) {
@@ -206,7 +210,7 @@ void drawPresetEditor(int index) {
   tft.setCursor(xValue, y);      tft.print(p.name);            y += yStep;
 
   tft.setCursor(xLabel, y);      tft.print("Gauge:");
-  tft.setCursor(xValue, y);      tft.print(p.gauge);           y += yStep;
+  tft.setCursor(xValue, y);      tft.print(p.gauge.c_str());           y += yStep;
 
   tft.setCursor(xLabel, y);      tft.print("Width (mm):");
   tft.setCursor(xValue, y);      tft.print(p.width_mm, 2);     y += yStep;
@@ -764,7 +768,7 @@ void drawWindingScreen() {
   tft.setCursor(xLabel, y);      
   tft.print("Scatter Mult:");     
   tft.setCursor(xValue, y); 
-  tft.print(currentPreset.pattern[currentLayer]); 
+  tft.print(traverse.getMultiplier()); 
   y += yStep;
 
   tft.setCursor(xLabel, y);      
@@ -839,14 +843,15 @@ void handleWindingScreenTouch() {
   // Left Jog Arrow
   if (tx > 120 && tx < 155 && ty > buttonY && ty < buttonY + 35) {
     Serial.println("Jog Left");
-    // traverse.setDirection(false); traverse.setRate(...);
+    traverse.jogDistance(100,0.1,false,true);
+    
     return;
   }
 
   // Right Jog Arrow
   if (tx > 165 && tx < 200 && ty > buttonY && ty < buttonY + 35) {
     Serial.println("Jog Right");
-    // traverse.setDirection(true); traverse.setRate(...);
+    traverse.jogDistance(100,0.1,true,true);
     return;
   }
 

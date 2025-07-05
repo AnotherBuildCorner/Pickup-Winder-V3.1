@@ -44,6 +44,7 @@
 #define TRAVERSE_TX_PIN      ((gpio_num_t)47)
 
 #define TRAVERSE_MICROSTEPS 16
+#define MAX_TRAVERSE_MULTIPLIER 10 // Maximum multiplier for traverse step rate
 
 #define DIAG_PIN ((gpio_num_t)13)
 //-------------  tensioner pins ---------------
@@ -58,3 +59,4 @@
 #define steps_rev 200 //steps/rev
 #define accel 200/steps_rev //rpm/second^2
 #define RPM_to_micros 60* micross / (steps_rev * 2) // conversion factor from RPM to microseconds per step
+

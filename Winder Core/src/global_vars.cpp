@@ -1,6 +1,7 @@
 #include "global_vars.h"
 #include "config.h"
 
+
 volatile bool launchActive = false;
 unsigned long steps_traversed = 0;
 int turn_count = 0;
@@ -26,13 +27,15 @@ unsigned long tick_count = 0;
 volatile uint32_t spindleStepCount = 0;
 volatile int traverseStepCount = 0;
 volatile bool traverseDir = false; // false starts advancing in the forward direction
-
+volatile bool enableTraverseISR = false; // Enable/disable traverse ISR
+volatile bool enableSpindleISR = false; // Enable/disable spindle ISR
+float plateZeroOffset = 5.1;
 float Tensioner_reading = 0; // Current tensioner reading in grams
 
 WinderPreset currentPreset = {
     "Default",
     1000, // Default turns
-    42,   // Default gauge
+    "42_n",   // Default gauge
     true, // Default spin direction
     50.0f, // Default width in mm
     0.0f,  // Default overwind percentage
@@ -40,5 +43,10 @@ WinderPreset currentPreset = {
     48.0f, // Default length in mm
     1.2f,  // Default center space in mm
     2.0f,  // Default faceplate thickness in mm
-    1.0f   // Default edge error in mm
+    1.0f,   // Default edge error in mm
+    0.000001f,
+    0.0635f, // 42 AWG diameter
+    17.0f, // min tension
+    22.0f // max tension
+
 };

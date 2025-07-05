@@ -1,4 +1,16 @@
-#define break_strength_42 80 //grams // Break strength in g
-#define min_42 17
-#define max_42 22
-#define diameter_42_std 0.065 //mm
+#include "global_vars.h"
+#pragma once
+
+#include <map>
+#include <string>
+
+struct WireProperties {
+    float diameter_mm;          // grams
+    float minTension_g;         // grams
+    float maxTension_g; 
+    float breakStrength_g;         // grams
+    float resistancePerMeter;   // ohms/m
+           // mm
+};
+
+bool applyWireProperties(WinderPreset& presets);

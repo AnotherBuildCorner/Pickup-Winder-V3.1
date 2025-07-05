@@ -1,5 +1,6 @@
 #include "preset.h"
 #include "global_vars.h"
+#include "wire_parameters.h"
 WinderPreset presets[8];
 
 void loadDefaultPresets() {
@@ -7,7 +8,7 @@ WinderPreset defaults[8] = {
   {
     "Strat",
     7600,
-    42,
+    "42n",
     false,
     52.0,
     0.0,
@@ -20,7 +21,7 @@ WinderPreset defaults[8] = {
   {
     "Tele",
     8000,
-    43,
+    "42h",
     false,
     50.0,
     0.0,
@@ -33,7 +34,7 @@ WinderPreset defaults[8] = {
   {
     "Humbucker",
     5000,
-    44,
+    "42n",
     false,
     60.0,
     0.0,
@@ -46,7 +47,7 @@ WinderPreset defaults[8] = {
   {
     "Jazz Bass",
     9000,
-    45,
+    "42n",
     false,
     55.5,
     0.0,
@@ -59,7 +60,7 @@ WinderPreset defaults[8] = {
   {
     "P90",
     10000,
-    42,
+    "42n",
     false,
     53.2,
     0.0,
@@ -72,7 +73,7 @@ WinderPreset defaults[8] = {
   {
     "FilterTron",
     8200,
-    44,
+    "42n",
     false,
     49.9,
     0.0,
@@ -85,7 +86,7 @@ WinderPreset defaults[8] = {
   {
     "MiniHB",
     8700,
-    43,
+    "42n",
     false,
     48.0,
     0.0,
@@ -98,11 +99,11 @@ WinderPreset defaults[8] = {
   {
     "Custom",
     1000,
-    42,
+    "42n",
     false,
-    56.0,
+    10.0,
     0.0,
-    {2, 2, 2, 7, 0},
+    {1, 2, 5, 7, 0},
     53.0,
     1.0,
     2.0,
@@ -112,5 +113,6 @@ WinderPreset defaults[8] = {
 
   for (int i = 0; i < 8; i++) {
     presets[i] = defaults[i];
+    applyWireProperties(presets[i]);
   }
 }

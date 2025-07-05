@@ -48,19 +48,34 @@ public:
   bool homeProcess(int rate, bool dir); // Back off after homing
   void compute_backoff(float distance);
   void setRPM(int RPM);
-  void setTraverseRate(int spindleStepRate, float wireGauge, float multiplier = 1.0f);
+  void setTraverseRate(int spindleStepRate, float wireGauge);
   void controlPosition(); // Control position based on step count
   int getLayerCount(); 
+  void jogDistance(int speed, float distance, bool direction, bool stopAfter = true);
+  void setMultiplier(); // Jog the stepper a certain distance at a given speed
+  float computePosition();
+  float getMultiplier();
+  void loadCompParameters(const WinderPreset& preset);
+  int computeLayers();
+  int computeLength();
+  int computeLiveDCR(int currentLayer, float layerProgress);
+
     // Implement acceleration ramp logic here
     // This is a placeholder for the actual implementation
   
 private:
-  gpio_num_t _stepPin, _dirPin, _enablePin, _readbackPin;
-  int _pos, _posMin, _posMax, _backoff;
-  gpio_num_t _homePin;
+  gpio_num_t _stepPin, _dirPin, _enablePin, _readbackPin ,_homePin;
+  std::string _gauge_type;
+  int _pos, _posMin, _posMax;
   bool _homeActiveLow, _homed, _dirState;
   int _ledcChannel;
   int _layerCount = 1;
+  float _multiplier = 1.0f, _backoff = 0.0f;
+  unsigned long _stepcount;
+  int _turns, _layers;
+  float _width, _length, _height, _internal_error, _gauge, _DCR;
+  std::vector<float> _pattern;
+  std::vector<int> _turnsPerLayer, _lengthPerLayer;
 };
 
 extern AxisStepper spindle;
