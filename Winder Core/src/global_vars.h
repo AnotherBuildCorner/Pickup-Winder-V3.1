@@ -16,10 +16,12 @@ extern unsigned long Current_Step_Rate;
 extern int Current_RPM;
 
 extern int selectedPreset;
-
+extern int currentLayer;
+extern int totalLayers; // Total number of layers in the winding
 extern bool runflag;
 extern int Current_RPM;
 extern int Target_RPM; // Target RPM for the spindle
+extern float currentPosition; // Current position of the traverse stepper
 extern bool run;
 
 extern volatile int steps_remaining; // -1 = run forever
@@ -30,6 +32,8 @@ extern volatile bool tick; // Used to synchronize with the main loop
 extern float Tensioner_reading; // Current tensioner reading in grams
 
 extern volatile uint32_t spindleStepCount;
+extern volatile int traverseStepCount;
+extern volatile bool traverseDir; // true = forward, false = backward
 
 struct WinderPreset {
   String name;

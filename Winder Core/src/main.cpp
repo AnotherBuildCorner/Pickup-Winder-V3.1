@@ -5,6 +5,7 @@
 //#include "motion.h"
 #include "motion_HW.h"
 #include "tensioner.h"
+#include "main.h"
 
 #define enable_screen true // Set to false to disable screen updates
 int calibrationDone = 1;
@@ -31,6 +32,9 @@ void setup() {
     initTMC();
     delay(100);
     traverse.enableHoming(DIAG_PIN, false); // Enable homing with active low
+    traverse.compute_backoff(5.0f); // Set backoff distance to 10mm
+    currentPreset=presets[0];
+
 
 }
 
@@ -45,67 +49,85 @@ void loop() {
   unsigned long ct2 = millis();
   static unsigned long traverse_timer = 0;
   static bool direction = 1;
-  static bool homed = true;
+  static bool homed = false;
   static bool runonce = false;
-
-
-
-
+  if(!homed){homed = homeCycle(50, traverseDir, 5.0f, ct2,100);}
     if(launchActive){
-      static unsigned long traverse_step_counter = 0;
-      static bool traverse_direction = true; // true = forward, false = backward
-      run = true;
-      
+      if(!run){
+        runonce = false;
+      }
+
+      timer_core_ms(ct2, 100); // Update core timer every 100ms
+      windingScreenHandler(ct2, 100); // Update the winding screen every 100ms
 
       if(spindle.getTurnCount() >= presets[selectedPreset].turns){
-        run = false; // Stop winding after 5000 turns
-        spindle.setEnabled(false);
-        traverse.setEnabled(false);}
- // Reset launch flag
-    if(run && homed == false){
-      if(runonce == false){
-        runonce = true;
-        traverse.setDirection(true);
-        traverse.setEnabled(true);
-        
-        traverse.setRate(500);
-        
-        
-    }
-        tensioner_output(ct2, 100);
-        traverse.checkHome(); // Check if homing is triggered
-        if(traverse.isHomed()) {
-          //homed = true;
-          traverse.setPosition(0); // Reset position after homing
-          traverse.setZero(); // Reset the stepper position
-          traverse.setEnabled(false); // Disable traverse after homing
-          delay(1000);
-
-        }
-
-  }
-
-
+        run = false; }// Stop winding after 5000 turns}
       
-      if(run && homed){
-        //Target_RPM = 1000;
-        spindle.getRate(ct2, 100); // Read the speed pot value and update target RPM
-        spindle.setEnabled(true);
-        traverse.setEnabled(true); // Disable traverse after homing
+      spindle.setEnabled(run);
+      traverse.setEnabled(run);
 
-        tensioner_output(ct2, 100);
-
-        if(spindle.getTurnCount() > presets[selectedPreset].turns-spin_down_turns){spindle.rampAcceleration(100, Accel_RPM, true, ct2, 100);}
-        else{spindle.rampAcceleration(Target_RPM, Accel_RPM, false, ct2, 100);}
-
-
-         // Ramp acceleration
+        
+      if(run && homed){ // Read the speed pot value and update target RPM
+        if(!runonce){
+          spindleStepCount = 0;
+          traverseStepCount = 0;
+          runonce = true;
+          traverse.setDirection(traverseDir); // Set initial direction
+        }
+        ramp_handler(ct2, 100); // Handle spindle ramping every 100ms
+        traverse_handler(ct2, 100); // Handle traverse movement every 100ms
         
 
+  }}
+  else{updateUI();
+  tensioner_output(ct2, 100);}
+}
 
-        if(traverse_timer + 200 < ct2){
-          
-          traverse_timer = ct2;
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+void timer_core_ms(unsigned long timer_ms, int refresh_Time) {
+  static unsigned long lastCoreTime = 0;
+  if (timer_ms - lastCoreTime < refresh_Time) return; // Limit core updates to every 100ms
+  lastCoreTime = timer_ms;
+  turn_count = spindle.getTurnCount();
+  tensioner_output(timer_ms, refresh_Time); // Update tensioner output
+
+}
+
+
+void ramp_handler(unsigned long timer_ms, int refresh_Time) {
+        static unsigned long lastRampTime = 0;
+        if(timer_ms - lastRampTime < refresh_Time) return; // Limit ramping to every 100ms
+
+        if(spindle.getTurnCount() > currentPreset.turns-spin_down_turns){spindle.rampAcceleration(100, Accel_RPM, true, timer_ms, refresh_Time);}
+        else{spindle.rampAcceleration(Target_RPM, Accel_RPM, false, timer_ms, refresh_Time);}
+        
+         // Set traverse rate based on spindle speed and wire gauge
+}
+
+
+void traverse_handler(unsigned long timer_ms, int refresh_Time) {
+  static unsigned long lastTraverseTime = 0;
+  spindle.getRate(timer_ms, refresh_Time); // Read the speed pot value and update target RPM
+  if (timer_ms - lastTraverseTime < refresh_Time) return; // Limit traverse updates to every 100ms
+    lastTraverseTime = timer_ms;
+    traverse.setLimits(0,10);
+    traverse.setTraverseRate(Current_Step_Rate, .0635, 1);
+    Serial.printf("Traverse Steps : %d\n", traverseStepCount);
+    traverse.controlPosition(); // Control position based on step count
+
+}
+
+void traverse_handler_old(unsigned long timer_ms, int refresh_Time) {
+  static unsigned long lastTraverseTime = 0;
+  static unsigned long traverse_step_counter = 0;
+  static bool traverse_direction = true; // true = forward, false = backward
+
+  spindle.getRate(timer_ms, refresh_Time); // Read the speed pot value and update target RPM
+
+  if (timer_ms - lastTraverseTime < refresh_Time) return; // Limit traverse updates to every 100ms
+    lastTraverseTime = timer_ms;
+
           traverse.setRate(Current_RPM);
           if(traverse_direction){
             traverse_step_counter+= 1; // Current_Step_Rate/5;
@@ -120,17 +142,5 @@ void loop() {
               traverse.setDirection(true);
             }
           }
-        }
 
-  
-      if(screentime + refreshmicros < ct && enable_screen) {screentime = ct; drawWindingScreen();}
-      if(coretimer + 200*1000 < ct){
-        turn_count = spindle.getTurnCount(); 
-        coretimer = ct;
-
-    }
-  }}
-  else{updateUI();
-  tensioner_output(ct2, 100);}
 }
-

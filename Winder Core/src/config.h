@@ -5,7 +5,8 @@
 #define Accel_RPM 200 //rpm
 #define maxrpm 1000
 #define refreshRate 10
-#define spin_down_turns 100
+#define spin_down_turns 30
+#define Lead_Screw_Pitch 2 //mm
 
 // -------------- screen pins --------------
 #define TFT_CS    5
@@ -34,16 +35,15 @@
 #define SPINDLE_MICROSTEPS 2
 
 
-
 #define TRAVERSE_STEP_PIN   ((gpio_num_t)38)
 #define TRAVERSE_DIR_PIN    ((gpio_num_t)37)
 #define TRAVERSE_ENABLE_PIN ((gpio_num_t)36)
-#define TRAVERSE_READBACK_PIN ((gpio_num_t)47)
+#define TRAVERSE_READBACK_PIN ((gpio_num_t)14)
 
-#define TRAVERSE_RX_PIN      ((gpio_num_t)48)
+#define TRAVERSE_RX_PIN      ((gpio_num_t)48)  // not in use
 #define TRAVERSE_TX_PIN      ((gpio_num_t)47)
 
-#define TRAVERSE_MICROSTEPS 8
+#define TRAVERSE_MICROSTEPS 16
 
 #define DIAG_PIN ((gpio_num_t)13)
 //-------------  tensioner pins ---------------

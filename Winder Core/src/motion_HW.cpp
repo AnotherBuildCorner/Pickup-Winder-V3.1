@@ -40,6 +40,14 @@ TMC2209Stepper traverse_driver(&TMCSerial, R_SENSE, Traverse_ADDRESS);
 
 void IRAM_ATTR onSpindleStep() {
   spindleStepCount++;
+  
+}
+
+void IRAM_ATTR onTraverseStep() {
+  if(traverseDir)
+    traverseStepCount++;
+  else
+    traverseStepCount--;
 }
 
 AxisStepper::AxisStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin, gpio_num_t readbackPin)
@@ -119,7 +127,6 @@ void AxisStepper::setRate(float RPM) {
     else if (RPM < 0) {RPM = 0; } // Prevent negative RPM
   Current_RPM = RPM; // Update current RPM
   Current_Step_Rate = (RPM * steps_rev * SPINDLE_MICROSTEPS) / 60.0;
-
   ledcWriteTone(_ledcChannel, Current_Step_Rate);
 }
 
@@ -154,13 +161,22 @@ void AxisStepper::resetStepCount() {
   spindleStepCount = 0;
 }
 
-TraverseStepper::TraverseStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin)
+TraverseStepper::TraverseStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin, gpio_num_t readbackPin)
   : _stepPin(stepPin), _dirPin(dirPin), _enablePin(enablePin), _pos(0),
     _posMin(0), _posMax(1000), _homePin(GPIO_NUM_NC), _homeActiveLow(true), _homed(false), _ledcChannel(ledcChannel) {}
 
+void TraverseStepper::setRPM(int RPM) {
+  if (RPM > maxrpm) {
+    RPM = maxrpm; } // Cap at max RPM
+    else if (RPM < 0) {RPM = 0; } // Prevent negative RPM
+    int Step_Rate = (RPM * steps_rev * TRAVERSE_MICROSTEPS) / 60.0;
+
+  ledcWriteTone(_ledcChannel, Step_Rate);
+}
+
 void TraverseStepper::begin() {
   pinMode(_dirPin, OUTPUT);
-  gpio_set_level(_dirPin, HIGH);
+  gpio_set_level(_dirPin, traverseDir);
 
   if (_enablePin != GPIO_NUM_NC) {
     pinMode(_enablePin, OUTPUT);
@@ -169,6 +185,10 @@ void TraverseStepper::begin() {
 
   ledcSetup(_ledcChannel, 5000, 1);
   ledcAttachPin(_stepPin, _ledcChannel);
+
+  pinMode(TRAVERSE_READBACK_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(TRAVERSE_READBACK_PIN), onTraverseStep, RISING);
+
 }
 
 void TraverseStepper::setRate(float stepsPerSecond) {
@@ -181,9 +201,40 @@ void TraverseStepper::setEnabled(bool run) {
   }
 }
 
-void TraverseStepper::setLimits(int minPos, int maxPos) {
-  _posMin = minPos;
-  _posMax = maxPos;
+void TraverseStepper::setLimits(float minPos, float maxPos) {
+  _posMin = distanceToSteps(minPos);
+  _posMax = distanceToSteps(maxPos);
+}
+
+void TraverseStepper::setTraverseRate(int spindleStepRate, float wireGauge, float multiplier)  {
+  // Convert spindle step rate to traverse step rate
+  int traverseStepRate = spindleStepRate * multiplier * wireGauge*(TRAVERSE_MICROSTEPS / SPINDLE_MICROSTEPS)/
+                          (Lead_Screw_Pitch); // Convert gauge to mm
+  ledcWriteTone(_ledcChannel, traverseStepRate);
+
+}
+
+void TraverseStepper::controlPosition() {
+static bool flip = false; // Flag to reverse direction
+if(traverseStepCount >= _posMax && !flip) {
+traverseDir = !traverseDir; // Reverse direction if max position exceeded
+setDirection(traverseDir);
+flip = true; // Set flag to prevent immediate reversal
+  Serial.println("Reached max position, reversing direction.");
+  _layerCount++; // Increment layer count when max position is reached
+} else if(traverseStepCount <= _posMin && flip) {
+  flip = false; // Reset flag to allow forward movement again
+  traverseDir = !traverseDir; // Reverse direction if min position exceeded
+  setDirection(traverseDir);
+  Serial.println("Reached min position, reversing direction.");
+  _layerCount++; // Increment layer count when max position is reached
+} else {
+  _pos = traverseStepCount; // Update current position
+}
+}
+
+int TraverseStepper::getLayerCount() {
+  return _layerCount;
 }
 
 void TraverseStepper::setPosition(int pos) {
@@ -195,7 +246,7 @@ int TraverseStepper::getPosition() const {
 }
 
 void TraverseStepper::setDirection(bool clockwise) {
-  _dirState = clockwise;
+  _dirState = !clockwise;
   gpio_set_level(_dirPin, _dirState);
 }
 
@@ -233,8 +284,71 @@ bool TraverseStepper::isHomed(){
   return _homed;
 }
 
-AxisStepper spindle(SPINDLE_STEP_PIN, SPINDLE_DIR_PIN, 0, SPINDLE_ENABLE_PIN);
-TraverseStepper traverse(TRAVERSE_STEP_PIN, TRAVERSE_DIR_PIN, 3, TRAVERSE_ENABLE_PIN);
+void TraverseStepper::compute_backoff(float distance) {
+_backoff = distanceToSteps(distance);
+  Serial.println("Backoff distance set to " + String(_backoff) + " steps.");
+}
+
+
+bool TraverseStepper::homeProcess(int rate, bool dir) {
+  if (!isHomed()) {
+    
+    setEnabled(true);
+    setDirection(traverseDir);
+    setRPM(rate);
+    checkHome();}
+    static bool save_steps = false;
+    if (isHomed()) {
+      if(!save_steps) {
+      traverseStepCount = 0; // Reset step count after homing
+      save_steps = true;
+      traverseDir = !traverseDir; // Reverse direction after homing
+      setDirection(traverseDir);} // Back off 10mm}
+      if(traverseStepCount >=  _backoff){
+        setEnabled(false); // Stop after backoff
+        setPosition(0); // Reset position after homing
+        setZero(); // Set zero position
+        Serial.println("Homing complete! Backed off");
+        return true; // Homing successful
+    }
+  }
+  return false; // Homing not yet complete
+}
+
+int TraverseStepper::distanceToSteps(float distance) {
+  // Convert distance to steps based on your stepper motor's configuration
+  //return static_cast<int>(distance * steps_rev * TRAVERSE_MICROSTEPS / Lead_Screw_Pitch);
+  return static_cast<int>(distance * steps_rev * (TRAVERSE_MICROSTEPS)/ Lead_Screw_Pitch);
+}
+
+AxisStepper spindle(SPINDLE_STEP_PIN, SPINDLE_DIR_PIN, 0, SPINDLE_ENABLE_PIN, SPINDLE_READBACK_PIN);
+TraverseStepper traverse(TRAVERSE_STEP_PIN, TRAVERSE_DIR_PIN, 3, TRAVERSE_ENABLE_PIN, TRAVERSE_READBACK_PIN);
+
+bool homeCycle(int rate, bool dir, float backoffDistance, unsigned long timer_ms, int refresh_Time) {
+  static bool runonce = false;
+  static bool homed = false;
+  static unsigned long lastHomingTime = 0;
+  static bool skip = false;
+  if (timer_ms - lastHomingTime < refresh_Time) { return homed;} // Limit homing to every 100ms
+  lastHomingTime = timer_ms;
+
+  if(!runonce) {
+    Serial.println("🔧 Homing cycle initiated...");
+    runonce = true;
+    spindle.setEnabled(false); // Ensure spindle is disabled during homing
+    spindle.setRate(rate);
+  }
+
+  if(!skip){
+  homed = traverse.homeProcess(rate, dir);}
+
+  if(homed) {
+    Serial.println("✅ Homing cycle completed successfully!");
+    traverse.setEnabled(false); // Stop traverse after homing
+    skip = true;}
+  return homed;
+
+}
 
 void initMotionPins() {
   pinMode(SPEED_POT,INPUT);
@@ -296,3 +410,25 @@ if(traverse_driver.test_connection() == 0) {
 
 }
 
+std::vector<int> precomputeMultipliers(int totalTurns, const std::vector<int>& pattern, float wireWidth, float bobbinWidth) {
+  std::vector<int> result;
+  result.reserve(totalTurns);
+
+  int layer = 0;
+  int turnsRemaining = totalTurns;
+
+  while (turnsRemaining > 0) {
+    int multiplier = pattern[layer % pattern.size()];
+    float stepSize = multiplier * wireWidth;
+    int turnsThisLayer = floor(bobbinWidth / stepSize);
+
+    for (int i = 0; i < turnsThisLayer && result.size() < totalTurns; ++i) {
+      result.push_back(multiplier);
+    }
+
+    ++layer;
+    turnsRemaining = totalTurns - result.size();
+  }
+
+  return result;
+}

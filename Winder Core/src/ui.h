@@ -50,3 +50,5 @@ void eraseCursor(int x, int y);
 void drawPatternOverlay();
 void handlePatternOverlayTouch();
 void drawWindingScreen();
+void handleWindingScreenTouch();
+void windingScreenHandler(unsigned long timer_ms, int refresh_rate = 100);

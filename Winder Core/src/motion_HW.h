@@ -6,6 +6,8 @@
 
 void initMotionPins();
 void initTMC();
+bool homeCycle(int rate, bool dir, float backoffDistance = 10.0f, unsigned long timer_ms = 0, int refresh_Time = 100);
+std::vector<int> precomputeMultipliers(int turns, int gauge, float width_mm, float overwind_percent, float center_space_mm, float faceplate_thickness, float edge_error = 0.0f);
 
 class AxisStepper {
 public:
@@ -25,15 +27,16 @@ private:
   bool _dirState;
   uint32_t _stepCount;
   int _ledcChannel;
+  int _currentStepRate = 0; // Current step rate in steps per second
 };
 
 class TraverseStepper {
 public:
-  TraverseStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin);
+  TraverseStepper(gpio_num_t stepPin, gpio_num_t dirPin, int ledcChannel, gpio_num_t enablePin,gpio_num_t readbackPin = GPIO_NUM_NC);
   void begin();
   void setEnabled(bool run);
   void setRate(float stepsPerSecond);
-  void setLimits(int minPos, int maxPos);
+  void setLimits(float minPos, float maxPos);
   void setPosition(int pos);
   int getPosition() const;
   void setZero();
@@ -41,17 +44,23 @@ public:
   void enableHoming(gpio_num_t pin, bool activeLow = true);
   void checkHome();
   bool isHomed();
-  
+  int distanceToSteps(float distance);
+  bool homeProcess(int rate, bool dir); // Back off after homing
+  void compute_backoff(float distance);
+  void setRPM(int RPM);
+  void setTraverseRate(int spindleStepRate, float wireGauge, float multiplier = 1.0f);
+  void controlPosition(); // Control position based on step count
+  int getLayerCount(); 
     // Implement acceleration ramp logic here
     // This is a placeholder for the actual implementation
   
 private:
-  gpio_num_t _stepPin, _dirPin, _enablePin;
-  int _pos, _posMin, _posMax;
+  gpio_num_t _stepPin, _dirPin, _enablePin, _readbackPin;
+  int _pos, _posMin, _posMax, _backoff;
   gpio_num_t _homePin;
   bool _homeActiveLow, _homed, _dirState;
   int _ledcChannel;
-  
+  int _layerCount = 1;
 };
 
 extern AxisStepper spindle;

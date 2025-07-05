@@ -85,6 +85,10 @@ void updateUI() {
       else if (editingState == EDIT_PATTERN) {
         handlePatternOverlayTouch();   // NEW: Pattern editor
       }
+      else if (menuState == PRESET_WINDING && ts.touched()) {
+        handleWindingScreenTouch();
+        currentPreset = presets[selectedPreset];
+      }
       else {
         handleEditOverlayTouch();      // Numeric pad (for everything else)
       }
@@ -704,7 +708,7 @@ void handlePatternOverlayTouch() {
   }
 }
 
-void drawWindingScreen() {
+void drawTestScreen() {
   int screenstart = 40;
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN);
@@ -726,4 +730,148 @@ void drawWindingScreen() {
   tft.setCursor(40, screenstart + 100);
   tft.print("tension: ");
   tft.print(Tensioner_reading);
+}
+
+void drawWindingScreen() {
+  int screenstart = 20;
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_GREEN);
+  tft.setTextSize(2);
+
+  // Title
+  tft.setCursor(60, screenstart);
+  tft.print("Winding Control");
+
+  // Stats
+  tft.setTextColor(TFT_WHITE);
+  int y = screenstart + 30;
+  int xLabel = 20, xValue = 180, yStep = 22;
+
+  // RPM: current / target
+  tft.setCursor(xLabel, y);      
+  tft.print("RPM:");      
+  tft.setCursor(xValue, y); 
+  tft.printf("%d / %d", Current_RPM, Target_RPM); 
+  y += yStep;
+
+  // Turns: current / target
+  tft.setCursor(xLabel, y);      
+  tft.print("Turns:");    
+  tft.setCursor(xValue, y); 
+  tft.printf("%d / %d", turn_count, currentPreset.turns); 
+  y += yStep;
+
+  tft.setCursor(xLabel, y);      
+  tft.print("Scatter Mult:");     
+  tft.setCursor(xValue, y); 
+  tft.print(currentPreset.pattern[currentLayer]); 
+  y += yStep;
+
+  tft.setCursor(xLabel, y);      
+  tft.print("Tension:");          
+  tft.setCursor(xValue, y); 
+  tft.print(Tensioner_reading); 
+  y += yStep;
+
+  tft.setCursor(xLabel, y);      
+  tft.print("Linear Pos:");       
+  tft.setCursor(xValue, y); 
+  tft.print(currentPosition); 
+  y += yStep;
+
+  tft.setCursor(xLabel, y);      
+  tft.print("Layer:");            
+  tft.setCursor(xValue, y); 
+  tft.printf("%d/%d", currentLayer, totalLayers);
+
+    int buttonY = 200; // was 220
+
+  // Back Button (left side, where Stop was)
+  tft.fillRect(20, buttonY, 80, 35, TFT_DARKGREY);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(40, buttonY + 10);
+  tft.print("Back");
+
+  // Jog Arrows (Left/Right)
+  tft.fillRect(120, buttonY, 35, 35, TFT_BLUE);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(130, buttonY + 12);
+  tft.print("<");
+
+  tft.fillRect(165, buttonY, 35, 35, TFT_BLUE);
+  tft.setCursor(180, buttonY + 12);
+  tft.print(">");
+
+  // Start/Stop Button (right side, opposite Back)
+  if (run) {
+    tft.fillRect(220, buttonY, 80, 35, TFT_RED);
+    tft.setTextColor(TFT_WHITE);
+    tft.setCursor(245, buttonY + 10);
+    tft.print("Stop");
+  } else {
+    tft.fillRect(220, buttonY, 80, 35, TFT_GREEN);
+    tft.setTextColor(TFT_BLACK);
+    tft.setCursor(245, buttonY + 10);
+    tft.print("Start");
+  }
+
+
+  // Restore default text color
+  tft.setTextColor(TFT_WHITE);
+}
+
+void handleWindingScreenTouch() {
+  TS_Point p = getMappedTouchPoint();
+  int tx = p.x;
+  int ty = p.y;
+
+  int buttonY = 200; // was 220
+
+  // Back Button (left)
+  if (tx > 20 && tx < 100 && ty > buttonY && ty < buttonY + 35) {
+    Serial.println("Back pressed");
+    menuState = PRESET_EDIT;
+    drawPresetEditor(selectedPreset);
+    run = false;
+    return;
+  }
+
+  // Left Jog Arrow
+  if (tx > 120 && tx < 155 && ty > buttonY && ty < buttonY + 35) {
+    Serial.println("Jog Left");
+    // traverse.setDirection(false); traverse.setRate(...);
+    return;
+  }
+
+  // Right Jog Arrow
+  if (tx > 165 && tx < 200 && ty > buttonY && ty < buttonY + 35) {
+    Serial.println("Jog Right");
+    // traverse.setDirection(true); traverse.setRate(...);
+    return;
+  }
+
+  // Start/Stop Button (right)
+  if (tx > 220 && tx < 300 && ty > buttonY && ty < buttonY + 35) {
+    run = !run;
+    Serial.printf("Winding %s\n", run ? "started" : "stopped");
+    return;
+  }
+}
+
+void windingScreenHandler(unsigned long timer_ms, int refresh_rate) {
+  static unsigned long lastUpdate = 0;
+  static unsigned long lastTouchTime = 0;
+  if (timer_ms - lastUpdate >= refresh_rate) {
+    lastUpdate = timer_ms;
+    drawWindingScreen();
+  }
+
+  if (ts.touched()) {
+    if(timer_ms - lastTouchTime > 200) {
+      lastTouchTime = timer_ms;
+      handleWindingScreenTouch();
+    }
+    
+  }
+
 }
