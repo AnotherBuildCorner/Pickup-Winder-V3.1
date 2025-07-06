@@ -36,7 +36,7 @@ public:
   void begin();
   void setEnabled(bool run);
   void setRate(float stepsPerSecond);
-  void setLimits(float minPos, float maxPos);
+  void setLimits(int currentpos);
   void setPosition(int pos);
   int getPosition() const;
   void setZero();
@@ -58,7 +58,8 @@ public:
   void loadCompParameters(const WinderPreset& preset);
   int computeLayers();
   int computeLength();
-  int computeLiveDCR(int currentLayer, float layerProgress);
+  int computeLiveDCR(int currentLayer, int current_steps);
+  void UIRunonce();
 
     // Implement acceleration ramp logic here
     // This is a placeholder for the actual implementation
@@ -66,14 +67,14 @@ public:
 private:
   gpio_num_t _stepPin, _dirPin, _enablePin, _readbackPin ,_homePin;
   std::string _gauge_type;
-  int _pos, _posMin, _posMax;
+  int _pos, _posMin, _posMax, _holdPos=0;
   bool _homeActiveLow, _homed, _dirState;
   int _ledcChannel;
   int _layerCount = 1;
   float _multiplier = 1.0f, _backoff = 0.0f;
   unsigned long _stepcount;
-  int _turns, _layers;
-  float _width, _length, _height, _internal_error, _gauge, _DCR;
+  int _turns, _layers, _totalLength;
+  float _width, _length, _height, _internal_error, _gauge, _DCR, _offset;
   std::vector<float> _pattern;
   std::vector<int> _turnsPerLayer, _lengthPerLayer;
 };

@@ -54,7 +54,8 @@ void loop() {
 
   if(serialtimer + 1000 < ct2) {
     serialtimer = ct2;
-    Serial.printf("Spindle Step Count: %d, Traverse Step Count: %d, Layer Count %d Traverse Direction: %s\n", spindleStepCount, traverseStepCount, currentLayer, traverseDir ? "Forward" : "Backward");
+    Serial.printf("Spindle Step Count: %d, Traverse Step Count: %d, Current Layer %d Traverse Direction: %s\n", spindleStepCount, traverseStepCount, currentLayer, traverseDir ? "Forward" : "Backward");
+    Serial.printf("MAX dcr: %d, Computed Length: %d, Layer Count: %d Computed DCR: %d\n", MAX_dcr, calculated_length,  totalLayers,current_DCR );
   }
   
 
@@ -63,6 +64,7 @@ void loop() {
     if(launchActive){
       if(!run){
         runonce = false;
+        Current_RPM = 0;
       }
 
       timer_core_ms(ct2, 100); // Update core timer every 100ms
@@ -120,11 +122,13 @@ void traverse_handler(unsigned long timer_ms, int refresh_Time) {
   if (timer_ms - lastTraverseTime < refresh_Time) return; // Limit traverse updates to every 100ms
     lastTraverseTime = timer_ms;
     currentPosition=traverse.computePosition();
-    traverse.setLimits(0,10);
+    traverse.setLimits(traverseStepCount);
     traverse.setMultiplier(); // Set multiplier based on current layer count
+    current_multiplier = traverse.getMultiplier();
     traverse.setTraverseRate(Current_Step_Rate, .0635);
     traverse.controlPosition(); // Control position based on step count
     currentLayer = traverse.getLayerCount(); // Update current layer count
+
 
 }
 

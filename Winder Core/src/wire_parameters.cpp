@@ -2,7 +2,7 @@
 #include "wire_parameters.h"
 
 std::map<std::string, WireProperties> wireTable = {
-    { "42n", { 0.0635f, 17.0f, 22.0f, 6.5f  } },   // Example values
+    { "42n", { 0.0635f, 17.0f, 22.0f, .065f  } },   // Example values
     { "42h",  { 0.0635f, 17.0f, 22.0f, 6.5f  } },
     { "44n", { 0.0635f, 17.0f, 22.0f, 6.5f   } },
     // Add more gauges/types as needed

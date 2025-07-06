@@ -209,9 +209,16 @@ void TraverseStepper::setEnabled(bool run) {
   }
 }
 
-void TraverseStepper::setLimits(float minPos, float maxPos) {
-  _posMin = distanceToSteps(minPos);
-  _posMax = distanceToSteps(maxPos);
+void TraverseStepper::setLimits(int currentpos) {
+
+  if(_holdPos == 0){
+    _holdPos = currentpos;
+  _posMin = _holdPos + distanceToSteps(_offset+_internal_error);
+  _posMax = _holdPos + distanceToSteps(_offset+_width-_internal_error);
+  Serial.printf("Min: %d Max: %d\n", _posMin, _posMax);
+  }
+
+
 }
 
 void TraverseStepper::setTraverseRate(int spindleStepRate, float wireGauge)  {
@@ -338,6 +345,14 @@ _backoff = distanceToSteps(distance);
   Serial.println("Backoff distance set to " + String(_backoff) + " steps.");
 }
 
+void TraverseStepper::UIRunonce(){
+  loadCompParameters(currentPreset);
+  jogDistance(50,currentPreset.faceplate_thickness,true);
+  currentPosition=computePosition();
+  totalLayers =  computeLayers();
+  calculated_length = computeLength();
+}
+
 void TraverseStepper::loadCompParameters(const WinderPreset& preset){
 _turns = preset.turns;
 _width = preset.width_mm;
@@ -348,6 +363,7 @@ _gauge_type = preset.gauge;
 _gauge = preset.wire_diameter_mm;
 _DCR = preset.resistance_per_Meter;
 _pattern = preset.pattern;
+_offset = preset.faceplate_thickness;
 }
 
 
@@ -362,7 +378,8 @@ int TraverseStepper::computeLayers() {
     mult = constrain(mult, 1.0f, MAX_TRAVERSE_MULTIPLIER);
 
     // Calculate turns in this layer
-    int turnlayer = (_width - _internal_error) / (_gauge * mult);
+    int turnlayer = (_width - _internal_error*2) / (_gauge * mult);
+    
     if (turnlayer <= 0) break;  // Prevent infinite loop on bad input
 
     _turnsPerLayer.push_back(turnlayer);
@@ -397,16 +414,18 @@ int TraverseStepper::computeLength() {
     float layerLength = circumference * turns * 1.01f;
 
     _lengthPerLayer.push_back(layerLength);
-    totalLength += layerLength;
+    _totalLength += layerLength;
   }
 
-  return totalLength;  // in mm
+  return static_cast<int>(_totalLength);
+  // in mm
 }
 
-int TraverseStepper::computeLiveDCR(int currentLayer, float layerProgress) {
+int TraverseStepper::computeLiveDCR(int currentLayer, int current_steps) {
   if (_lengthPerLayer.empty() || currentLayer < 0) return 0.0f;
 
-  layerProgress = constrain(layerProgress, 0.0f, 1.0f);
+  float layerProgress = constrain(((_posMax-_posMin)/(current_steps-_posMin)),0.0f,1.0f);
+  
 
   float totalLength = 0.0f;
 
@@ -420,7 +439,7 @@ int TraverseStepper::computeLiveDCR(int currentLayer, float layerProgress) {
     totalLength += _lengthPerLayer[currentLayer] * layerProgress;
   }
 
-  return totalLength * _DCR;  // final DCR value
+  return static_cast<int>(totalLength * _DCR);  // final DCR value
 }
 
 

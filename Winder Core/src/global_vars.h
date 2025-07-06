@@ -15,12 +15,16 @@ extern int Current_RPM;
 
 extern int selectedPreset;
 extern int currentLayer;
+extern int current_DCR;
+extern int calculated_length;
 extern int totalLayers; // Total number of layers in the winding
 extern bool runflag;
 extern int Current_RPM;
 extern int Target_RPM; // Target RPM for the spindle
 extern float currentPosition; // Current position of the traverse stepper
 extern bool run;
+extern float current_multiplier;
+extern int MAX_dcr;
 
 extern volatile int steps_remaining; // -1 = run forever
 extern volatile int spindle_isr_mult; // multiplier for ISR to control step frequency

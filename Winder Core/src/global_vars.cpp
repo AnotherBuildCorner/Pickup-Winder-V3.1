@@ -17,8 +17,10 @@ volatile int spindle_isr_mult = 100;
 float currentPosition = 0.0f; // Current position of the traverse stepper
 int currentLayer = 0; // Current winding layer
 int totalLayers = 0; // Total number of layers in the winding
-
-
+int calculated_length = 0;
+int current_DCR = 0;
+float current_multiplier = 0.0f;
+int MAX_dcr = 0;
 volatile int Layer = 0; // Current winding layer
 
 volatile bool tick = false; // Used to synchronize with the main loop
@@ -35,7 +37,7 @@ float Tensioner_reading = 0; // Current tensioner reading in grams
 WinderPreset currentPreset = {
     "Default",
     1000, // Default turns
-    "42_n",   // Default gauge
+    "42n",   // Default gauge
     true, // Default spin direction
     50.0f, // Default width in mm
     0.0f,  // Default overwind percentage

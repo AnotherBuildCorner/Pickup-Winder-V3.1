@@ -181,8 +181,8 @@ void handleEditScreenTouch() {
   drawWindingScreen();  // Optional placeholder screen
   launchActive = true;  // Set global flag to indicate winding is active
   currentPreset = presets[selectedPreset];  // Update current preset
-  traverse.loadCompParameters(currentPreset);
-  traverse.jogDistance(50,currentPreset.faceplate_thickness,true);
+
+  traverse.UIRunonce();
   return;
 }
   else if (tx > 200 && tx < 300 && ty > 215 && ty < 235) {
@@ -844,6 +844,7 @@ void handleWindingScreenTouch() {
   if (tx > 120 && tx < 155 && ty > buttonY && ty < buttonY + 35) {
     Serial.println("Jog Left");
     traverse.jogDistance(100,0.1,false,true);
+    currentPosition=traverse.computePosition();
     
     return;
   }
@@ -852,6 +853,7 @@ void handleWindingScreenTouch() {
   if (tx > 165 && tx < 200 && ty > buttonY && ty < buttonY + 35) {
     Serial.println("Jog Right");
     traverse.jogDistance(100,0.1,true,true);
+    currentPosition=traverse.computePosition();
     return;
   }
 
