@@ -11,12 +11,15 @@
 int calibrationDone = 1;
 void setup() {
   Serial.begin(115200);
-  
+  SPIFFS.begin(true);
 
   delay(500);
   Serial.println("Did we boot?");
+
   
   loadDefaultPresets();   // Loads dummy preset data
+
+  //loadAllPresets();  Work in progress
   
   if(enable_screen){
   initUI();     
@@ -70,7 +73,7 @@ void loop() {
       timer_core_ms(ct2, 100); // Update core timer every 100ms
       windingScreenHandler(ct2, 100); // Update the winding screen every 100ms
 
-      if(spindle.getTurnCount() >= currentPreset.turns){
+      if(spindle.getTurnCount() >= currentPreset.turns*(1+currentPreset.overwind_percent)){
         run = false; }// Stop winding after 5000 turns}
       
       spindle.setEnabled(run);
@@ -109,7 +112,7 @@ void ramp_handler(unsigned long timer_ms, int refresh_Time) {
         static unsigned long lastRampTime = 0;
         if(timer_ms - lastRampTime < refresh_Time) return; // Limit ramping to every 100ms
 
-        if(spindle.getTurnCount() > currentPreset.turns-spin_down_turns){spindle.rampAcceleration(10, Accel_RPM, true, timer_ms, refresh_Time);}
+        if(spindle.getTurnCount() > currentPreset.turns*(1+currentPreset.overwind_percent)-spin_down_turns){spindle.rampAcceleration(10, Accel_RPM, true, timer_ms, refresh_Time);}
         else{spindle.rampAcceleration(Target_RPM, Accel_RPM, false, timer_ms, refresh_Time);}
         
          // Set traverse rate based on spindle speed and wire gauge

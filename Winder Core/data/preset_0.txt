@@ -1,0 +1,11 @@
+name: Strat_2.0
+turns: 7605
+gauge: 42n
+spin_direction: false
+width_mm: 52.000
+overwind_percent: 0.000
+pattern: 2, 4, 6, 0
+length_mm: 48.000
+center_space_mm: 1.200
+faceplate_thickness: 2.000
+edge_error: 1.000

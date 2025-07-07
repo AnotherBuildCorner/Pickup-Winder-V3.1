@@ -354,7 +354,7 @@ void TraverseStepper::UIRunonce(){
 }
 
 void TraverseStepper::loadCompParameters(const WinderPreset& preset){
-_turns = preset.turns;
+_turns = preset.turns*(1+preset.overwind_percent/100);
 _width = preset.width_mm;
 _length = preset.length_mm;
 _height = preset.center_space_mm;

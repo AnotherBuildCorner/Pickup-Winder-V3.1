@@ -221,9 +221,10 @@ void drawPresetEditor(int index) {
   tft.setCursor(xLabel, y);      tft.print("Pattern:");
   tft.setCursor(xValue, y);
   for (int i = 0; i < min(4, (int)p.pattern.size()); i++) {
-    tft.print(p.pattern[i]);
+    tft.printf("%.0f",p.pattern[i]);
     if (i < p.pattern.size() - 1) tft.print(",");
   }
+  if (p.pattern.size() > 4){tft.print("...");}
   y += yStep;
 
   tft.setCursor(xLabel, y);      tft.print("Length (mm):");
@@ -774,9 +775,17 @@ void drawWindingScreen() {
   tft.setCursor(xLabel, y);      
   tft.print("Tension:");          
   tft.setCursor(xValue, y); 
-  tft.print(Tensioner_reading); 
+  if(Tensioner_reading < currentPreset.min_tension_g){
+    tft.setTextColor(TFT_YELLOW);
+  }
+  else if(Tensioner_reading > currentPreset.max_tension_g){
+    tft.setTextColor(TFT_RED);
+  }
+  else{tft.setTextColor(TFT_GREEN);}
+  tft.printf("%.0f|%.1f|%.0f",currentPreset.min_tension_g,Tensioner_reading,currentPreset.max_tension_g); 
   y += yStep;
 
+  tft.setTextColor(TFT_WHITE);
   tft.setCursor(xLabel, y);      
   tft.print("Linear Pos:");       
   tft.setCursor(xValue, y); 

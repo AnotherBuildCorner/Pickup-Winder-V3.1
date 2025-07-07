@@ -1,0 +1,11 @@
+name: Jazz Bass
+turns: 9000
+gauge: 42n
+spin_direction: false
+width_mm: 55.500
+overwind_percent: 0.000
+pattern: 4, 2, 1, 0
+length_mm: 51.000
+center_space_mm: 1.500
+faceplate_thickness: 2.000
+edge_error: 1.000

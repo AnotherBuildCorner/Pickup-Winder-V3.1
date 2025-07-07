@@ -1,0 +1,11 @@
+name: MiniHB
+turns: 8700
+gauge: 42n
+spin_direction: false
+width_mm: 48.000
+overwind_percent: 0.000
+pattern: 6, 3, 1, 0
+length_mm: 50.000
+center_space_mm: 2.200
+faceplate_thickness: 2.000
+edge_error: 1.000

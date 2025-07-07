@@ -1,0 +1,11 @@
+name: Tele
+turns: 8000
+gauge: 42h
+spin_direction: false
+width_mm: 50.000
+overwind_percent: 0.000
+pattern: 1, 3, 5, 0
+length_mm: 49.000
+center_space_mm: 1.000
+faceplate_thickness: 2.000
+edge_error: 1.000

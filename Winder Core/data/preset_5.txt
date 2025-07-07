@@ -1,0 +1,11 @@
+name: FilterTron
+turns: 8200
+gauge: 42n
+spin_direction: false
+width_mm: 49.900
+overwind_percent: 0.000
+pattern: 1, 2, 3, 0
+length_mm: 46.000
+center_space_mm: 1.000
+faceplate_thickness: 2.000
+edge_error: 1.000

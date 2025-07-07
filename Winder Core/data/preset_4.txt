@@ -1,0 +1,11 @@
+name: P90
+turns: 10000
+gauge: 42n
+spin_direction: false
+width_mm: 53.200
+overwind_percent: 0.000
+pattern: 3, 3, 6, 0
+length_mm: 47.500
+center_space_mm: 2.500
+faceplate_thickness: 2.000
+edge_error: 1.000

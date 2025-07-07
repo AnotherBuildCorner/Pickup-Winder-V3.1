@@ -1,0 +1,11 @@
+name: Humbucker
+turns: 5000
+gauge: 42n
+spin_direction: false
+width_mm: 6.000
+overwind_percent: 0.000
+pattern: 1, 2, 2, 5, 1, 1
+length_mm: 57.500
+center_space_mm: 6.500
+faceplate_thickness: 2.000
+edge_error: 1.000
