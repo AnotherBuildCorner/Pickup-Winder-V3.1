@@ -192,6 +192,53 @@ void handleEditScreenTouch() {
 }
 
 
+void handlePresetDataReturn(MenuState state, String data) {
+  int return_int = 0;
+  float return_float = 0.0f;
+ Serial.printf("Input Data %s" , data);
+  switch (state) {
+    case EDIT_LENGTH:
+      return_float = data.toFloat();
+      presets[selectedPreset].length_mm = return_float;
+      break;
+
+    case EDIT_GAUGE:
+      presets[selectedPreset].gauge = data.c_str();
+      break;
+
+    case EDIT_WIDTH:
+      presets[selectedPreset].width_mm = data.toFloat();
+      break;
+
+    case EDIT_CENTER:
+      return_float = data.toFloat();
+      presets[selectedPreset].center_space_mm = return_float;
+
+      break;
+
+    case EDIT_OVERWIND:
+      return_float = data.toFloat();
+      presets[selectedPreset].overwind_percent = return_float;
+
+      break;
+
+    case EDIT_TURNS:
+      presets[selectedPreset].turns = data.toInt();
+      break;
+
+    case EDIT_DIR:
+      presets[selectedPreset].Spin_direction = (data == "true" || data == "1");
+      break;
+
+    default:
+      Serial.println("Unhandled state");
+      break;
+  }
+}
+
+
+
+
 
 
 void drawPresetEditor(int index) {
@@ -272,10 +319,12 @@ void handleEditOverlayTouch() {
         // 🆕 Exit without saving
         editingState = NONE;
         drawPresetEditor(selectedPreset);
+        Serial.println("Back");
         return;
         }
         else if (strcmp(label, "OK") == 0) {
-          // TODO: Apply editBuffer to preset field
+          Serial.println("OK");
+          handlePresetDataReturn(menuState,editBuffer);
           editingState = NONE;
           drawPresetEditor(selectedPreset);
           return;
@@ -782,7 +831,7 @@ void drawWindingScreen() {
     tft.setTextColor(TFT_RED);
   }
   else{tft.setTextColor(TFT_GREEN);}
-  tft.printf("%.0f|%.1f|%.0f",currentPreset.min_tension_g,Tensioner_reading,currentPreset.max_tension_g); 
+  tft.printf("%.0f|%.1f|%.0f",currentPreset.min_tension_g,Tensioner_Max_Reading,currentPreset.max_tension_g); //currentPreset.max_tension_g
   y += yStep;
 
   tft.setTextColor(TFT_WHITE);

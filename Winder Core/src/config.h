@@ -17,6 +17,10 @@
 #define TFT_SCLK  20//19//14
 #define TFT_MOSI  21//20//13
 
+#define SD_CS 6
+#define SD_MOSI 45
+#define SD_MISO 47
+#define SD_SCK 39
 
 #define TOUCH_CS  4
 #define TOUCH_IRQ 15
@@ -27,11 +31,11 @@
 //------------ Motion control pins ------------
 #define SPINDLE_STEP_PIN    ((gpio_num_t)2)
 #define SPINDLE_DIR_PIN     ((gpio_num_t)42)
-#define SPINDLE_ENABLE_PIN  ((gpio_num_t)41)
-#define SPINDLE_READBACK_PIN  ((gpio_num_t)40)
+#define SPINDLE_ENABLE_PIN  ((gpio_num_t)1)  // 41  1
+#define SPINDLE_READBACK_PIN  ((gpio_num_t)40) // 40   45
 
 #define SPINDLE_RX_PIN      ((gpio_num_t)35)
-#define SPINDLE_TX_PIN      ((gpio_num_t)39)
+#define SPINDLE_TX_PIN      ((gpio_num_t)39)  //39 46
 #define SPINDLE_MICROSTEPS 2
 
 
@@ -40,8 +44,8 @@
 #define TRAVERSE_ENABLE_PIN ((gpio_num_t)36)
 #define TRAVERSE_READBACK_PIN ((gpio_num_t)14)
 
-#define TRAVERSE_RX_PIN      ((gpio_num_t)48)  // not in use
-#define TRAVERSE_TX_PIN      ((gpio_num_t)47)
+//#define TRAVERSE_RX_PIN      ((gpio_num_t)48)  // not in use
+//#define TRAVERSE_TX_PIN      ((gpio_num_t)47)
 
 #define TRAVERSE_MICROSTEPS 16
 #define MAX_TRAVERSE_MULTIPLIER 10 // Maximum multiplier for traverse step rate

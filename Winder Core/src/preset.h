@@ -3,11 +3,12 @@
 #include "global_vars.h"
 #include "FFat.h"
 #include "SPIFFS.h"
-
+#include <SD.h>
 
 
 void loadDefaultPresets();
 void bootFS();
 void savePresetToFile(const WinderPreset& preset, const char* filename);
+void initSD();
 WinderPreset loadPresetFromReadableFile(const char* filename);
 std::vector<WinderPreset> loadAllPresets();

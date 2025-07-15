@@ -32,6 +32,7 @@ extern volatile int spindle_isr_mult; // multiplier for ISR to control step freq
 extern unsigned long tick_count; // Current winding layer
 extern volatile bool tick; // Used to synchronize with the main loop
 extern float Tensioner_reading; // Current tensioner reading in grams
+extern float Tensioner_Max_Reading;
 
 extern volatile uint32_t spindleStepCount;
 extern volatile int traverseStepCount;
@@ -39,6 +40,7 @@ extern volatile bool traverseDir; // true = forward, false = backward
 extern volatile bool enableTraverseISR;
 extern volatile bool enableSpindleISR;
 extern float plateZeroOffset;
+
 
 extern std::vector<int> precomputedMultipliers;
 

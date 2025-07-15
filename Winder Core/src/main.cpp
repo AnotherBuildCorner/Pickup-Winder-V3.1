@@ -9,17 +9,19 @@
 
 #define enable_screen true // Set to false to disable screen updates
 int calibrationDone = 1;
+
 void setup() {
   Serial.begin(115200);
-  SPIFFS.begin(true);
+  //SPIFFS.begin(true);
 
   delay(500);
   Serial.println("Did we boot?");
+  
 
   
   loadDefaultPresets();   // Loads dummy preset data
-
-  //loadAllPresets();  Work in progress
+  initSD();
+  auto presets =  loadAllPresets();  //Work in progress
   
   if(enable_screen){
   initUI();     

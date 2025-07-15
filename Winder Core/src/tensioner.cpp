@@ -3,6 +3,8 @@
 #include "tensioner.h"
 
 float scaleFactor = testread / testweight;
+float Tensioner_Max_Reading = 0;
+#define Tensioner_Peak_Reads 10
 HX711 scale;
 
 void tensioner_setup() {
@@ -20,13 +22,21 @@ void tensioner_setup() {
 
 void tensioner_output(unsigned long timer_ms, int refresh_Time) {
   static unsigned long lastReadTime = 0;
+  static int maxcounter = 0;
   if (timer_ms - lastReadTime < refresh_Time) return;
+  maxcounter++;
+  if(maxcounter >=Tensioner_Peak_Reads){
+    maxcounter = 0;
+    Tensioner_Max_Reading = 0;
+  }
+
   lastReadTime = timer_ms;
   bool printserial = false;
   bool nr = true;
   Tensioner_reading = 1111.1111;
   if (scale.is_ready()) {
     Tensioner_reading = scale.get_units(1);  // Or .read_average() for raw
+    Tensioner_Max_Reading = max(Tensioner_reading,Tensioner_Max_Reading);
     nr = false;}
 
     if(printserial){

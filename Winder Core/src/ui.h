@@ -18,6 +18,7 @@ enum EditingState {
   EDIT_LENGTH,
   EDIT_CENTER,
   EDIT_OVERWIND,
+  EDIT_DIR,
 
 };
 
