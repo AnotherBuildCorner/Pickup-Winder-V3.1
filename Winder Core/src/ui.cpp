@@ -29,6 +29,7 @@ bool cursorVisible = false;
 int editValue = 1;
 int patternEdit[20];  // max entries
 int patternLength = 0;
+bool saved = false;
 
 
 const char* keys[4][4] = {
@@ -73,7 +74,7 @@ void drawPresetButtons() {
 void updateUI() {
   if (ts.touched()) {
     TS_Point p = ts.getPoint();
-    Serial.printf("Touch: x=%d y=%d z=%d\n", p.x, p.y, p.z);
+    //Serial.printf("Touch: x=%d y=%d z=%d\n", p.x, p.y, p.z);
   delay(100);}
   if (menuState == PRESET_SELECT && ts.touched()) {
     handlePresetSelectTouch();
@@ -187,15 +188,18 @@ void handleEditScreenTouch() {
 }
   else if (tx > 200 && tx < 300 && ty > 215 && ty < 235) {
     Serial.printf("Preset %d saved (placeholder)\n", selectedPreset);
-    delay(200);
+  String path = "/preset_" + String(selectedPreset) + ".txt";
+  savePresetToFileSPIFF(presets[selectedPreset], path.c_str());
+  saved = true;
+    
   }
 }
 
 
-void handlePresetDataReturn(MenuState state, String data) {
+void handlePresetDataReturn(EditingState state, String data) {
   int return_int = 0;
   float return_float = 0.0f;
- Serial.printf("Input Data %s" , data);
+ Serial.printf("Input Data %s, State: \n" , data, state);
   switch (state) {
     case EDIT_LENGTH:
       return_float = data.toFloat();
@@ -286,9 +290,16 @@ void drawPresetEditor(int index) {
   // Draw buttons
   tft.fillRect(20, 215, 100, 20, TFT_DARKGREY);
   tft.setCursor(40, 218); tft.setTextColor(TFT_WHITE); tft.print("Back");
-
+if(saved){
+  tft.fillRect(200, 215, 100, 20, TFT_GREEN);
+  tft.setCursor(225, 218); tft.setTextColor(TFT_WHITE); tft.print("Saving");
+  delay(500);
+  saved = false;
+}
+  else{
   tft.fillRect(200, 215, 100, 20, TFT_DARKGREY);
-  tft.setCursor(225, 218); tft.setTextColor(TFT_WHITE); tft.print("Save");
+  tft.setCursor(225, 218); tft.setTextColor(TFT_WHITE); tft.print("Save"); 
+  }
 
   tft.fillRect(110, 215, 100, 25, TFT_BLUE);
 tft.setTextColor(TFT_WHITE);
@@ -324,7 +335,7 @@ void handleEditOverlayTouch() {
         }
         else if (strcmp(label, "OK") == 0) {
           Serial.println("OK");
-          handlePresetDataReturn(menuState,editBuffer);
+          handlePresetDataReturn(editingState,editBuffer);
           editingState = NONE;
           drawPresetEditor(selectedPreset);
           return;

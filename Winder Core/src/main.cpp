@@ -21,13 +21,18 @@ void setup() {
   
   loadDefaultPresets();   // Loads dummy preset data
   initSD();
-  auto presets =  loadAllPresets();  //Work in progress
+  initSPIFF();
+  auto presets =  loadAllPresetsSPIFF();  //Work in progress
+   presets =  loadAllPresets();  //Work in progress
+  Serial.printf("Preset 1 name: %s\n",presets[1].name);
   
   if(enable_screen){
   initUI();     
   if(!calibrationDone) {
     runCalibration();      // Run calibration only if not done
   }}
+
+ 
 
 
     initMotionPins();
@@ -39,7 +44,7 @@ void setup() {
     delay(100);
     traverse.enableHoming(DIAG_PIN, false); // Enable homing with active low
     traverse.compute_backoff(5.0f); // Set backoff distance to 10mm
-
+  
 }
 
 
@@ -56,8 +61,9 @@ void loop() {
   static bool direction = 1;
   static bool homed = false;
   static bool runonce = false;
+  bool printlines = false;
 
-  if(serialtimer + 1000 < ct2) {
+  if(serialtimer + 1000 < ct2 && printlines) {
     serialtimer = ct2;
     Serial.printf("Spindle Step Count: %d, Traverse Step Count: %d, Current Layer %d Traverse Direction: %s\n", spindleStepCount, traverseStepCount, currentLayer, traverseDir ? "Forward" : "Backward");
     Serial.printf("MAX dcr: %d, Computed Length: %d, Layer Count: %d Computed DCR: %d\n", MAX_dcr, calculated_length,  totalLayers,current_DCR );

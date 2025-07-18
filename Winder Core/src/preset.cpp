@@ -3,26 +3,35 @@
 #include "wire_parameters.h"
 
 #include <Arduino.h>
-#include "FFat.h"
-#include "USBMSC.h"
+
 #include <SPI.h>
-#include <SD.h>
-USBMSC MSC;
-#include "USB.h"
 WinderPreset presets[8];
 
 SPIClass spiSD(1);  // Instance using VSPI
 
 void initSD(){
 
-  pinMode(SD_CS, OUTPUT);
+ // pinMode(SD_CS, OUTPUT);
   spiSD.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
   
-  if (!SD.begin(SD_CS, spiSD, 8000000)) { // up to 80MHz possible
+  if (!SD.begin(SD_CS, spiSD, 4*1000*1000)) { // up to 80MHz possible
     Serial.println("SD init failed");
   } else {
     Serial.println("SD OK");
   }
+}
+
+void initSPIFF(){
+
+  delay(500);
+
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS Mount Failed");
+    return;
+  }
+
+  Serial.println("SPIFFS mounted successfully.");
+
 }
 
 void loadDefaultPresets() {
@@ -239,10 +248,10 @@ std::vector<WinderPreset> loadAllPresets() {
   return all;
 }
 
-/*
 
 
-WinderPreset loadPresetFromReadableFile(const char* filename) {
+
+WinderPreset loadPresetFromReadableFileSPIFF(const char* filename) {
   File file = SPIFFS.open(filename, "r");
   WinderPreset preset;
 
@@ -264,7 +273,8 @@ WinderPreset loadPresetFromReadableFile(const char* filename) {
     key.trim();
     value.trim();
 
-    if (key == "name") preset.name = value;
+    if (key == "name") {preset.name = value;
+    Serial.printf("Preset File: %s opened. Name: %s \n", filename,preset.name );}
     else if (key == "turns") preset.turns = value.toInt();
     else if (key == "gauge") preset.gauge = value.c_str();
     else if (key == "spin_direction") preset.Spin_direction = (value == "true" || value == "1");
@@ -295,16 +305,17 @@ WinderPreset loadPresetFromReadableFile(const char* filename) {
   return preset;
 }
 
-std::vector<WinderPreset> loadAllPresets() {
+std::vector<WinderPreset> loadAllPresetsSPIFF() {
   std::vector<WinderPreset> all;
   for (int i = 0; i < 8; ++i) {
     String path = "/preset_" + String(i) + ".txt";
-    all.push_back(loadPresetFromReadableFile(path.c_str()));
+    all.push_back(loadPresetFromReadableFileSPIFF(path.c_str()));
+    presets[i]=loadPresetFromReadableFileSPIFF(path.c_str());
   }
   return all;
 }
 
-void savePresetToFile(const WinderPreset& preset, const char* filename) {
+void savePresetToFileSPIFF(const WinderPreset& preset, const char* filename) {
   File file = SPIFFS.open(filename, "w");
   if (!file) {
     Serial.printf("Failed to open file for writing: %s\n", filename);
@@ -338,4 +349,3 @@ void savePresetToFile(const WinderPreset& preset, const char* filename) {
   file.close();
   Serial.printf("Saved preset to %s\n", filename);
 }
-*/
