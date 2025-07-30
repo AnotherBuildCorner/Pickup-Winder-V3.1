@@ -47,11 +47,17 @@ void IRAM_ATTR onSpindleStep() {
 
 void IRAM_ATTR onTraverseStep() {
   if(enableTraverseISR) {
+    if(INIT_TRAVERSE) {    
+      if(traverseDir) {
+      traverseStepCount--;
+    } else {
+      traverseStepCount++;}}
+    else{
     if(traverseDir) {
       traverseStepCount++;
     } else {
       traverseStepCount--;
-    }
+    }}
   }
 
 }
@@ -107,7 +113,7 @@ void AxisStepper::getRate(unsigned long timer_ms, int refresh_Time) {
 
   // Read and map pot value
   int potValue = analogRead(SPEED_POT);
-  int RPM = map(potValue, 0, ADC_MAX, 0, maxrpm);
+  int RPM = map(potValue, 0, ADC_MAX, maxrpm, 0);
 
   // Store in buffer
   rpmBuffer[bufferIndex] = RPM;

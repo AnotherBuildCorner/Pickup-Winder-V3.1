@@ -20,7 +20,7 @@ void setup() {
 
   
   loadDefaultPresets();   // Loads dummy preset data
-  initSD();
+  //initSD();
   initSPIFF();
   auto presets =  loadAllPresetsSPIFF();  //Work in progress
    presets =  loadAllPresets();  //Work in progress
@@ -42,7 +42,7 @@ void setup() {
     delay(100);
     initTMC();
     delay(100);
-    traverse.enableHoming(DIAG_PIN, false); // Enable homing with active low
+    traverse.enableHoming(DIAG_PIN, true); // Enable homing with active low
     traverse.compute_backoff(5.0f); // Set backoff distance to 10mm
   
 }

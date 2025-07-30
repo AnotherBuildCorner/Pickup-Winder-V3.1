@@ -40,11 +40,11 @@
 #define SPINDLE_TX_PIN      ((gpio_num_t)39)  //39 46
 #define SPINDLE_MICROSTEPS 2
 
-
+#define INIT_TRAVERSE true
 #define TRAVERSE_STEP_PIN   ((gpio_num_t)38)
 #define TRAVERSE_DIR_PIN    ((gpio_num_t)37)
-#define TRAVERSE_ENABLE_PIN ((gpio_num_t)36)
-#define TRAVERSE_READBACK_PIN ((gpio_num_t)35)
+#define TRAVERSE_ENABLE_PIN ((gpio_num_t)35)
+#define TRAVERSE_READBACK_PIN ((gpio_num_t)36)
 
 //#define TRAVERSE_RX_PIN      ((gpio_num_t)48)  // not in use
 //#define TRAVERSE_TX_PIN      ((gpio_num_t)47)
