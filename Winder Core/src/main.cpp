@@ -71,7 +71,7 @@ void loop() {
   
 
 
-  if(!homed){homed = homeCycle(50, traverseDir, 5.0f, ct2,100);}
+  if(!homed){homed = homeCycle(50, traverseDir, plateZeroOffset, ct2,100);}
     if(launchActive){
       if(!run){
         runonce = false;

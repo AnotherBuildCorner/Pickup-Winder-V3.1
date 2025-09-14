@@ -31,7 +31,7 @@ volatile int traverseStepCount = 0;
 volatile bool traverseDir = INIT_TRAVERSE; // false starts advancing in the forward direction
 volatile bool enableTraverseISR = false; // Enable/disable traverse ISR
 volatile bool enableSpindleISR = false; // Enable/disable spindle ISR
-float plateZeroOffset = 5.1;
+float plateZeroOffset = 10.1;
 float Tensioner_reading = 0; // Current tensioner reading in grams
 
 WinderPreset currentPreset = {

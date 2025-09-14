@@ -494,6 +494,7 @@ bool homeCycle(int rate, bool dir, float backoffDistance, unsigned long timer_ms
   static bool homed = false;
   static unsigned long lastHomingTime = 0;
   static bool skip = false;
+  traverse.compute_backoff(backoffDistance); // Set backoff distance
   if (timer_ms - lastHomingTime < refresh_Time) { return homed;} // Limit homing to every 100ms
   lastHomingTime = timer_ms;
 
