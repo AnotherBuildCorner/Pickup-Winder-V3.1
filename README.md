@@ -37,6 +37,12 @@ Heres the intended improvements.
     This is part of the previous problem. While presets could be loaded into IDE and then selected via a selectable parameter in code. This still required modification to the code files any time a new pickup was desired.
     This new winder incorporates a small touch screen to allow parameter editing, and multiple presets than can be tweaked before deployment. (say a 5% underwind while maintaining all other specifications).
 
+## Mechanicals
 
+## Electricals
+
+## Software
+
+## Interface
 
 ![alt text](<Photos/Winder Current State 9-14.JPG>)
