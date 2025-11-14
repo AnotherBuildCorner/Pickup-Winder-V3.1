@@ -81,6 +81,8 @@ Currently there is a provision to add a SD card, external reset switch, and an o
 
 One step "backward" is the system no longer has a closed loop feedback on the spindle. However in practice no steps are dropped. and from experience if enough torque to drop a step is encountered, the stepper will drive backwards and ruin the bobbin anyways. So closed loop control is an unnessecary extra. 
 
+There is currently an Error in the spacing of the microcontroller pins. The wider spaced outline fits correctly, however the narrow spacing, designed for a narrower S3 board, is too narrow.
+
 ## Interface
 (In progress)
 
